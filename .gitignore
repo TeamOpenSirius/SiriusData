@@ -1,0 +1,35 @@
+# .NET build and test output
+**/bin/
+**/obj/
+**/publish/
+**/TestResults/
+
+# NuGet pack output
+artifacts/
+*.nupkg
+*.snupkg
+
+# IDE and per-user settings
+.vs/
+.idea/
+.vscode/
+*.suo
+*.user
+*.rsuser
+*.DotSettings.user
+*.sln.docstates
+
+# Agent/index local state
+.codegraph/
+.codex/
+.agents/
+.claude/
+
+# Local master data and scratch output
+*.db
+*.db-shm
+*.db-wal
+*.orig
+*.rej
+*.bak
+*.cache

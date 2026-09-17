@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS8618;CS8981</NoWarn>
+  </PropertyGroup>
+  <!-- Prebuilt fallback package. Consuming repositories prefer a sibling ProjectReference
+       and use this package only when E:\Ymst\Projects\SiriusData is not checked out. -->
+  <PropertyGroup>
+    <PackageId>Sirius.Protocol</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>khfahqp</Authors>
+    <Description>Shared Sirius wire protocol DTOs, MasterMemory table models, and the generated MasterMemory database.</Description>
+    <PackageTags>sirius;protocol;messagepack;mastermemory;magiconion</PackageTags>
+    <PackageReadmeFile>README.MasterMemory.md</PackageReadmeFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="tools\**\*.cs" />
+    <None Include="tools\**\*" Pack="false" />
+    <None Include="README.MasterMemory.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="MagicOnion.Abstractions" Version="6.1.7" />
+    <PackageReference Include="MasterMemory" Version="3.0.4" />
+    <PackageReference Include="MessagePack" Version="3.1.8" />
+    <PackageReference Include="MessagePackAnalyzer" Version="3.1.8" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

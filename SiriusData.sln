@@ -1,0 +1,25 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sirius.Protocol", "src\Sirius.Protocol\Sirius.Protocol.csproj", "{1CAE23AF-7AAB-42FD-80C6-35CCAE447380}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Wds.MasterMemory.Tool", "src\Sirius.Protocol\tools\Wds.MasterMemory.Tool\Wds.MasterMemory.Tool.csproj", "{7F3C9C61-1E4B-4E2A-9B3D-2C5A6E7F8A90}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1CAE23AF-7AAB-42FD-80C6-35CCAE447380}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1CAE23AF-7AAB-42FD-80C6-35CCAE447380}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1CAE23AF-7AAB-42FD-80C6-35CCAE447380}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1CAE23AF-7AAB-42FD-80C6-35CCAE447380}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F3C9C61-1E4B-4E2A-9B3D-2C5A6E7F8A90}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F3C9C61-1E4B-4E2A-9B3D-2C5A6E7F8A90}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F3C9C61-1E4B-4E2A-9B3D-2C5A6E7F8A90}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F3C9C61-1E4B-4E2A-9B3D-2C5A6E7F8A90}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
