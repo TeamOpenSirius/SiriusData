@@ -23,15 +23,17 @@ the rest of `Sirius.Protocol.Shared` must be compiled into the same assembly.
 nothing else in the server repository. Moving it whole keeps every namespace,
 type name, and assembly name unchanged, so consuming projects need no source edits.
 
-Note that `Sirius.MasterIndexer` in the server repository is a separate, checked-in
-generated pipeline. It does not reference `Sirius.Protocol` and is unaffected by this
-repository.
+The retired `Sirius.MasterIndexer` PostgreSQL import/index pipeline was deleted rather
+than migrated. `Sirius.MasterData` contains only the typed MasterMemory
+edit/export/rebuild layer and reuses the table models in `Sirius.Protocol`.
 
 ## Layout
 
 ```
 SiriusData.sln
 src/
+  Sirius.MasterData/
+    Sirius.MasterData.csproj      net8.0;net10.0 typed MasterMemory editor library
   Sirius.Protocol/
     Sirius.Protocol.csproj        net8.0;net10.0 class library
     Common/                       MessagePack helpers and API result types
@@ -77,7 +79,7 @@ build machine without a sibling checkout can fall back to the prebuilt package.
 dotnet build .\SiriusData.sln -c Release
 ```
 
-The library targets `net8.0` and `net10.0`. The offline tool targets `net8.0`.
+The libraries target `net8.0` and `net10.0`. The offline verification tool targets `net8.0`.
 
 ## Produce the prebuilt package
 
@@ -87,6 +89,31 @@ dotnet pack .\src\Sirius.Protocol\Sirius.Protocol.csproj -c Release -o .\artifac
 
 Point consumers at `artifacts\packages` through a `nuget.config` feed entry when they
 cannot use a sibling checkout.
+
+## `Sirius.MasterData` library API
+
+`src/Sirius.MasterData` exposes the typed layer the desktop tooling uses, so no caller
+needs to reimplement MessagePack parsing or MasterMemory layout handling:
+
+```csharp
+var report = MasterMemoryDatabaseService.Verify(databasePath);
+var tables = MasterMemoryDatabaseService.GetTables(databasePath);
+var rows   = MasterMemoryDatabaseService.ListRecords(databasePath, tableName, offset, limit);
+await MasterMemoryDatabaseService.ExportAllJsonAsync(databasePath, jsonDirectory);
+var pack = MasterMemoryDatabaseService.PackFromJson(
+    sourceDatabase, jsonDirectory, baselineJsonDirectory, outputDatabase, requireExact: true);
+```
+
+`PackFromJson` rebuilds a database from an exported JSON directory. A table whose JSON
+is byte-identical to the baseline keeps its original payload block; a table whose JSON
+still decodes to the original values also keeps its original block. Only tables with a
+real value change are re-encoded through the generated `DatabaseBuilder`, and
+`requireExact` fails the run when a no-op export would not be byte-identical. Edits are
+applied with the same typed converters as `AddRecord`/`UpdateRecord`, so the strict
+round trip doubles as a model check.
+
+The `Wds.MasterMemory.Tool` console entry point remains available for scripted offline
+work; both surfaces share the same typed converters.
 
 ## `Wds.MasterMemory.Tool`
 

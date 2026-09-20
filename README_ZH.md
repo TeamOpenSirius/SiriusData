@@ -20,14 +20,17 @@ MessagePack `[Union]` 接口，其成员列表覆盖整套共享数据模型：�
 的任何其他项目。整体搬迁可以保持所有命名空间、类型名和程序集名不变，消费方无需
 改动任何源码。
 
-服务端仓库中的 `Sirius.MasterIndexer` 是另一条已签入的生成式流水线，它不引用
-`Sirius.Protocol`，不受本次拆分影响。
+废弃的 `Sirius.MasterIndexer` PostgreSQL 导入/索引管线已直接删除，不迁移。
+`Sirius.MasterData` 只承载类型化 MasterMemory 编辑、导出和重建层，并复用
+`Sirius.Protocol` 中的表模型。
 
 ## 目录结构
 
 ```
 SiriusData.sln
 src/
+  Sirius.MasterData/
+    Sirius.MasterData.csproj      net8.0;net10.0 类型化 MasterMemory 编辑库
   Sirius.Protocol/
     Sirius.Protocol.csproj        net8.0;net10.0 类库
     Common/                       MessagePack 辅助与 API 结果类型
@@ -71,7 +74,7 @@ E:\Ymst\Projects\SiriusToolbox
 dotnet build .\SiriusData.sln -c Release
 ```
 
-类库目标框架为 `net8.0` 与 `net10.0`，离线工具目标框架为 `net8.0`。
+两个类库目标框架为 `net8.0` 与 `net10.0`，离线校验工具目标框架为 `net8.0`。
 
 ## 生成预编译库
 
@@ -80,6 +83,29 @@ dotnet pack .\src\Sirius.Protocol\Sirius.Protocol.csproj -c Release -o .\artifac
 ```
 
 无法使用同级检出时，在消费方 `nuget.config` 中把 `artifacts\packages` 添加为源即可。
+
+## `Sirius.MasterData` 库 API
+
+`src/Sirius.MasterData` 提供桌面工具使用的类型化层，调用方不需要自己实现 MessagePack
+解析或 MasterMemory 布局处理：
+
+```csharp
+var report = MasterMemoryDatabaseService.Verify(databasePath);
+var tables = MasterMemoryDatabaseService.GetTables(databasePath);
+var rows   = MasterMemoryDatabaseService.ListRecords(databasePath, tableName, offset, limit);
+await MasterMemoryDatabaseService.ExportAllJsonAsync(databasePath, jsonDirectory);
+var pack = MasterMemoryDatabaseService.PackFromJson(
+    sourceDatabase, jsonDirectory, baselineJsonDirectory, outputDatabase, requireExact: true);
+```
+
+`PackFromJson` 从导出的 JSON 目录重建数据库。与 baseline 逐字节相同的表直接保留原始
+数据块；JSON 虽然被重新格式化但解码后取值不变的表同样保留原始块。只有真正发生取值
+变化的表才会通过生成的 `DatabaseBuilder` 重新编码；开启 `requireExact` 时，若未改动
+的导出无法做到逐字节一致就会直接失败。编辑流程复用 `AddRecord`/`UpdateRecord` 的
+类型化转换器，因此严格回包同时充当模型校验。
+
+`Wds.MasterMemory.Tool` 命令行入口继续保留，用于脚本化的离线操作；两个入口共用同一套
+类型化转换器。
 
 ## `Wds.MasterMemory.Tool`
 

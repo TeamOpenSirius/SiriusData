@@ -43,8 +43,9 @@ calculators stop keeping private copies of the model classes.
 
 - The server repository no longer contains `Sirius.Protocol`. Its `Directory.Build.props`
   resolves the sibling checkout first and the prebuilt package second.
-- `Sirius.MasterIndexer` in the server repository is a separate checked-in generated
-  pipeline and does not reference this repository. Do not link the two.
+- The retired `Sirius.MasterIndexer` PostgreSQL pipeline must not be recreated.
+  `src/Sirius.MasterData` may contain only MasterMemory editing/export/rebuild code and
+  must reuse the table models in `Sirius.Protocol`.
 - Treat `E:\Ymst\Projects\SiriusServer\episode\Adv-Resource` as off limits unless the
   user explicitly asks otherwise.
 
