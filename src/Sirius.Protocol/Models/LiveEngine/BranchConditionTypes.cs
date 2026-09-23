@@ -19,4 +19,5 @@ public enum BranchConditionTypes
     PosterAppearanceCompanyCount = 9,
     StorageSenseLightCount = 10,
     CharacterBaseGroup = 11,
+    SenseTriggeredCount = 12,
 }

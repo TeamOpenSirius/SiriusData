@@ -57,4 +57,7 @@ public enum EffectTypes
     PrincipalGaugeBonus = 48,
     PerformanceDuplicateUp = 49,
     CombinationSense = 50,
+    PlayerRankPointUp = 51,
+    PrincipalGaugeGainPercentageOfLimit = 52,
+    StarActProcrastinate = 53,
 }
