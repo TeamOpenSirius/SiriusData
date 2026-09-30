@@ -33,6 +33,9 @@
 
 除此之外，仓库还包含一部分 **TeamOpenSirius 自有协议**。这些类型位于 `Sirius.Protocol.InternalApi`，用于 OpenSirius 内部服务之间通信，例如游戏服务端、账号平台和 Realtime 后端。它们属于 OpenSirius 私有基础设施协议，**不是客户端原始 API 的一部分**。
 
+`PlatformScoreRecordMutationContracts.cs` 定义 SiriusServer 补录正常结算成绩、
+清空指定谱面打歌记录的请求与响应类型。
+
 简单来说，SiriusData 是以下模块之间的公共数据边界：
 
 - 从 YMST 客户端恢复出的协议与数据结构；
