@@ -33,6 +33,10 @@
 
 除此之外，仓库还包含一部分 **TeamOpenSirius 自有协议**。这些类型位于 `Sirius.Protocol.InternalApi`，用于 OpenSirius 内部服务之间通信，例如游戏服务端、账号平台和 Realtime 后端。它们属于 OpenSirius 私有基础设施协议，**不是客户端原始 API 的一部分**。
 
+`PlatformBestScoreApiContracts.cs` 定义按版本校验的最佳成绩设置请求和响应，供 SiriusServer 的
+`/internal/platform/accounts/{accountId}/scores/best/{musicId}/{difficulty}` GET/PUT 接口使用。
+部署时需同时包含对应的服务端修改。
+
 简单来说，SiriusData 是以下模块之间的公共数据边界：
 
 - 从 YMST 客户端恢复出的协议与数据结构；

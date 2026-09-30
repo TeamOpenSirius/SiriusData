@@ -33,6 +33,10 @@ Most game-facing models in `Sirius.Protocol` were reconstructed and adapted from
 
 The repository also contains a small set of **TeamOpenSirius-specific contracts** under `Sirius.Protocol.InternalApi`. These models are private infrastructure contracts used for communication between OpenSirius services such as the game server, account/platform services, and realtime backend. They are **not** intended to represent original client APIs.
 
+`PlatformBestScoreApiContracts.cs` defines the version-checked best-score replacement
+request and response used by SiriusServer's `/internal/platform/accounts/{accountId}/scores/best/{musicId}/{difficulty}`
+GET/PUT endpoints. Deploy this contract together with the matching server change.
+
 In short, SiriusData acts as the shared boundary between:
 
 - reconstructed YMST client protocol structures;
