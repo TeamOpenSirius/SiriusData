@@ -140,6 +140,13 @@ public sealed class PlatformScoreEntry
     public bool IsBest30 { get; set; }
     public long AcceptedAt { get; set; }
     public string Source { get; set; } = string.Empty;
+    // Per-attempt counts supplied by /scores; null when unavailable or a best snapshot.
+    public int? PerfectStar { get; set; }
+    public int? Perfect { get; set; }
+    public int? Great { get; set; }
+    public int? Good { get; set; }
+    public int? Bad { get; set; }
+    public int? Miss { get; set; }
 }
 
 public sealed class PlatformBest30Reply
