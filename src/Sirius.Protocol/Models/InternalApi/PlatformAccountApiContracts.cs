@@ -59,6 +59,22 @@ public sealed class PlatformCreateOfficialUserImportRequest
 {
     public string LinkageId { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
+
+    /// <summary>
+    /// How an official account that is already bound to a private account is resolved.
+    /// <see cref="OfficialUserImportConflictPolicies.Incremental"/> (the default when the value is
+    /// empty) refreshes the private account that is already bound to the official account.
+    /// <see cref="OfficialUserImportConflictPolicies.NewAccount"/> creates one more private
+    /// account instead, and allocates a new public user id when the official public user id is
+    /// already taken by another account.
+    /// </summary>
+    public string ConflictPolicy { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Optional private account that an incremental import must refresh. It removes the ambiguity
+    /// once several private accounts were imported from the same official account.
+    /// </summary>
+    public long TargetAccountId { get; set; }
 }
 
 public sealed class PlatformCreateOfficialUserImportReply
@@ -88,6 +104,12 @@ public sealed class PlatformOfficialUserImportStatusReply
     public string WarningCode { get; set; } = string.Empty;
     public string WarningDetail { get; set; } = string.Empty;
     public bool? BinaryMatched { get; set; }
+    /// <summary>See <see cref="OfficialUserImportConflictPolicies"/>.</summary>
+    public string ConflictPolicy { get; set; } = string.Empty;
+    /// <summary>See <see cref="OfficialUserImportSources"/>.</summary>
+    public string Source { get; set; } = string.Empty;
+    /// <summary>Whether the raw response is cached and reusable by a retry.</summary>
+    public bool HasReusableRawData { get; set; }
     public long CreatedAt { get; set; }
     public long? StartedAt { get; set; }
     public long? CompletedAt { get; set; }
