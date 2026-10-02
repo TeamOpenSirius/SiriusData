@@ -516,6 +516,17 @@ jobs:
 
 [`.github/workflows/dotnet.yml`](./.github/workflows/dotnet.yml)
 
+### 发布新版本
+
+在干净的 `main` 分支上运行以下脚本，会自动推送当前提交、创建并推送
+`v1.2.3` 标签，随后触发 GitHub Packages 发布：
+
+```powershell
+.\scripts\Publish-Release.ps1 1.2.3
+```
+
+脚本不会覆盖已有标签；可使用 `-WhatIf` 预览操作。
+
 ## 参与贡献
 
 欢迎补充协议结构、修复逆向模型、恢复缺失字段，或改进公共工具链。

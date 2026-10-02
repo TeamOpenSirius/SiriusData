@@ -493,6 +493,17 @@ jobs:
 
 See [`.github/workflows/dotnet.yml`](./.github/workflows/dotnet.yml).
 
+### Publishing a release
+
+From a clean `main` branch, run the script below to push the current commit,
+create and push a `v1.2.3` tag, and trigger GitHub Packages publishing:
+
+```powershell
+.\scripts\Publish-Release.ps1 1.2.3
+```
+
+The script never overwrites an existing tag. Use `-WhatIf` to preview the actions.
+
 ## Contributing
 
 Contributions that improve protocol accuracy, recover missing schema information, or make shared infrastructure easier to reuse are welcome.
