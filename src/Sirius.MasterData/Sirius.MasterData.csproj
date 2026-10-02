@@ -4,6 +4,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
+    <PackageId>Sirius.MasterData</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>khfahqp</Authors>
+    <Description>Typed MasterMemory editing and validation services for SiriusData.</Description>
+    <PackageTags>sirius;mastermemory;masterdata</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Sirius.Protocol\Sirius.Protocol.csproj" />
