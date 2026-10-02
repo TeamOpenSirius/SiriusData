@@ -518,3 +518,9 @@ MessagePack、MasterMemory、MagicOnion 等第三方依赖分别受其自身许�
 SiriusData 是非官方的社区互操作与基础设施项目。
 
 *World Dai Star*、*World Dai Star: Yume no Stellarium*、ユメステ，以及相关名称、数据、资源和商标均归各自权利人所有。本仓库不是官方 SDK，与游戏开发商、发行商和运营方不存在官方隶属或授权关系。
+
+## 内部导入 API 兼容性
+
+共享官服导入契约包含 Dashboard 与 Server 使用的 `conflictPolicy`、`targetAccountId`、`source`、`hasReusableRawData`。缺少或未知策略按 `incremental` 处理，`new_account` 显式新建独立账号；目标未传为 0。这些新增 JSON 字段不改变 MasterMemory 表或游戏协议模型。
+
+使用 .NET 10 SDK 执行 `dotnet test tests/Sirius.Protocol.Tests` 检查策略与 JSON 兼容性。

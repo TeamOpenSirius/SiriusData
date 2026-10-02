@@ -495,3 +495,9 @@ Third-party dependencies such as MessagePack, MasterMemory, and MagicOnion remai
 SiriusData is an unofficial community interoperability and infrastructure project.
 
 *World Dai Star*, *World Dai Star: Yume no Stellarium*, ユメステ, and related names, data, assets, and trademarks belong to their respective rights holders. This repository is not an official SDK and is not affiliated with or endorsed by the game's developers, publishers, or operators.
+
+## Internal import API compatibility
+
+The shared official-import contracts include `conflictPolicy`, `targetAccountId`, `source`, and `hasReusableRawData` consumed by Dashboard and Server. Missing/unknown policy normalizes to `incremental`; `new_account` explicitly creates a separate account. Missing target remains zero. These additive JSON fields do not change MasterMemory tables or game wire models.
+
+Run `dotnet test tests/Sirius.Protocol.Tests` for policy and JSON compatibility checks (.NET 10 SDK).

@@ -55,10 +55,22 @@ public sealed class PlatformIssueTemporaryTakeOverReply
     public string ErrorCode { get; set; } = string.Empty;
 }
 
+public static class OfficialUserImportConflictPolicies
+{
+    public const string Incremental = "incremental";
+    public const string NewAccount = "new_account";
+
+    public static string Normalize(string? value) =>
+        string.Equals(value?.Trim(), NewAccount, StringComparison.OrdinalIgnoreCase) ? NewAccount : Incremental;
+}
+
 public sealed class PlatformCreateOfficialUserImportRequest
 {
     public string LinkageId { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
+    // Empty preserves legacy requests; the server normalizes it to incremental.
+    public string ConflictPolicy { get; set; } = string.Empty;
+    public long TargetAccountId { get; set; }
 }
 
 public sealed class PlatformCreateOfficialUserImportReply
@@ -91,6 +103,9 @@ public sealed class PlatformOfficialUserImportStatusReply
     public long CreatedAt { get; set; }
     public long? StartedAt { get; set; }
     public long? CompletedAt { get; set; }
+    public string ConflictPolicy { get; set; } = string.Empty;
+    public string Source { get; set; } = string.Empty;
+    public bool HasReusableRawData { get; set; }
 }
 
 public sealed class PlatformOfficialUserImportJobPage
