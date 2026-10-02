@@ -55,13 +55,36 @@ public sealed class PlatformIssueTemporaryTakeOverReply
     public string ErrorCode { get; set; } = string.Empty;
 }
 
+/// <summary>
+/// Accepted values for <see cref="PlatformCreateOfficialUserImportRequest.ConflictPolicy"/>.
+/// An unrecognized or empty value is treated as <see cref="Incremental"/>, so existing callers
+/// keep the previous behaviour.
+/// </summary>
 public static class OfficialUserImportConflictPolicies
 {
+    /// <summary>
+    /// Reuse the private account already bound to the official account and replace its state.
+    /// A public user id that belongs to an account which was not created by an official import
+    /// remains a hard conflict.
+    /// </summary>
     public const string Incremental = "incremental";
+
+    /// <summary>
+    /// Never reuse an existing private account. One more private account is created, and it
+    /// receives a fresh public user id when the official public user id is already taken.
+    /// </summary>
     public const string NewAccount = "new_account";
 
+    /// <summary>
+    /// Normalizes a caller supplied policy name. Unknown values fall back to
+    /// <see cref="Incremental"/>.
+    /// </summary>
     public static string Normalize(string? value) =>
-        string.Equals(value?.Trim(), NewAccount, StringComparison.OrdinalIgnoreCase) ? NewAccount : Incremental;
+        value?.Trim().Replace("-", "_", StringComparison.Ordinal).ToLowerInvariant() switch
+        {
+            NewAccount or "newaccount" or "new" or "allocate_new_user_id" => NewAccount,
+            _ => Incremental
+        };
 }
 
 public sealed class PlatformCreateOfficialUserImportRequest
@@ -122,9 +145,6 @@ public sealed class PlatformOfficialUserImportStatusReply
     public long CreatedAt { get; set; }
     public long? StartedAt { get; set; }
     public long? CompletedAt { get; set; }
-    public string ConflictPolicy { get; set; } = string.Empty;
-    public string Source { get; set; } = string.Empty;
-    public bool HasReusableRawData { get; set; }
 }
 
 public sealed class PlatformOfficialUserImportJobPage
