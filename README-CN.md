@@ -70,10 +70,9 @@ SiriusData 遵循几个核心原则：
 
 它包含 HTTP/API Payload、玩家状态、MasterData、Live 逻辑、Realtime 网络以及大量游戏系统共用的数据结构。
 
-当前目标框架：
+目标框架：
 
 ```text
-net8.0
 net10.0
 ```
 
@@ -300,7 +299,7 @@ SiriusData/
 
 ### 环境要求
 
-完整构建需要能够同时编译目标框架的 .NET SDK。
+完整构建使用 .NET 10 SDK。
 
 ```powershell
 dotnet restore .\SiriusData.sln
@@ -310,11 +309,10 @@ dotnet build .\SiriusData.sln -c Release
 主要类库目标：
 
 ```text
-net8.0
 net10.0
 ```
 
-MasterMemory 离线工具使用 .NET 8。
+MasterMemory 离线工具也使用 .NET 10。
 
 ## 在其他项目中引用
 
@@ -487,13 +485,24 @@ dotnet run --project .\src\Sirius.Protocol\tools\Wds.MasterMemory.Tool -- `
 
 ## CI
 
-GitHub Actions 会在 push 到 `main` 和针对 `main` 的 Pull Request 上运行。
+GitHub Actions 会在 push 到 `main`、针对 `main` 的 Pull Request 以及 `v*`
+标签上运行。流程使用 .NET 10 SDK 完成 Restore、Release Build 和测试，然后
+为 `net10.0` 打包 `Sirius.Protocol`。
 
-当前流程：
+每次运行都会发布可下载的 artifact，其中包含带版本号的 NuGet 包（`.nupkg`
+和 `.snupkg`）以及 Release 二进制文件。普通 CI 使用
+`1.0.0-ci.<运行编号>` 版本；例如 `v1.2.3` 标签会生成 `1.2.3`。artifact
+由 GitHub Actions 保留 30 天。
 
-1. Restore；
-2. Build；
-3. `dotnet test`。
+其他仓库也可以直接复用这个 workflow：
+
+```yaml
+jobs:
+  siriusdata:
+    uses: TeamOpenSirius/SiriusData/.github/workflows/dotnet.yml@main
+    with:
+      package-version: 1.2.3-ci.${{ github.run_number }}
+```
 
 配置文件：
 

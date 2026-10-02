@@ -71,10 +71,9 @@ SiriusData is designed around a few simple rules:
 
 It contains the shared types used across HTTP/API-like payloads, player state, master data, live calculation, realtime communication, and related game systems.
 
-The project currently targets:
+The project targets:
 
 ```text
-net8.0
 net10.0
 ```
 
@@ -286,7 +285,7 @@ SiriusData/
 
 ### Requirements
 
-For the full multi-target solution, use a .NET SDK capable of building both target frameworks.
+Use the .NET 10 SDK to build the solution.
 
 ```powershell
 dotnet restore .\SiriusData.sln
@@ -296,11 +295,10 @@ dotnet build .\SiriusData.sln -c Release
 The main libraries target:
 
 ```text
-net8.0
 net10.0
 ```
 
-The offline MasterMemory tool targets .NET 8.
+The offline MasterMemory tool also targets .NET 10.
 
 ## Consuming SiriusData
 
@@ -466,13 +464,24 @@ A successful byte-exact no-op round trip is a strong signal that the model still
 
 ## CI
 
-GitHub Actions runs on pushes and pull requests targeting `main`.
+GitHub Actions runs on pushes and pull requests targeting `main`, and on `v*`
+tags. It restores dependencies, builds and tests the solution with the .NET 10
+SDK, then packs `Sirius.Protocol` for `net10.0`.
 
-The workflow performs:
+Each run publishes a downloadable artifact containing the versioned NuGet
+package (`.nupkg` and `.snupkg`) and the Release binaries. CI builds use a
+`1.0.0-ci.<run number>` version; a tag such as `v1.2.3` produces version
+`1.2.3`. Artifacts are retained by GitHub Actions for 30 days.
 
-1. dependency restore;
-2. solution build;
-3. `dotnet test`.
+The workflow is also reusable from another repository:
+
+```yaml
+jobs:
+  siriusdata:
+    uses: TeamOpenSirius/SiriusData/.github/workflows/dotnet.yml@main
+    with:
+      package-version: 1.2.3-ci.${{ github.run_number }}
+```
 
 See [`.github/workflows/dotnet.yml`](./.github/workflows/dotnet.yml).
 
