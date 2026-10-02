@@ -11,7 +11,7 @@
        and use this package only when E:\Ymst\Projects\SiriusData is not checked out. -->
   <PropertyGroup>
     <PackageId>Sirius.Protocol</PackageId>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <Authors>khfahqp</Authors>
     <Description>Shared Sirius wire protocol DTOs, MasterMemory table models, and the generated MasterMemory database.</Description>
     <PackageTags>sirius;protocol;messagepack;mastermemory;magiconion</PackageTags>
