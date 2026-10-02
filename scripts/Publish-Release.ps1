@@ -67,10 +67,9 @@ if (git tag --list $tag) {
 $head = (& git rev-parse HEAD).Trim()
 $remoteHead = (& git rev-parse "origin/$Branch").Trim()
 if ($head -ne $remoteHead) {
-    if (-not $PSCmdlet.ShouldProcess("origin/$Branch", '推送当前提交')) {
-        return
+    if ($PSCmdlet.ShouldProcess("origin/$Branch", '推送当前提交')) {
+        Invoke-Git @('push', 'origin', "HEAD:$Branch")
     }
-    Invoke-Git @('push', 'origin', "HEAD:$Branch")
 }
 
 if (-not $PSCmdlet.ShouldProcess($tag, '创建并推送发布标签')) {
