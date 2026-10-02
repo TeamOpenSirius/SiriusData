@@ -341,13 +341,21 @@ workspace/
 dotnet pack .\src\Sirius.Protocol\Sirius.Protocol.csproj `
   -c Release `
   -o .\artifacts\packages
+dotnet pack .\src\Sirius.MasterData\Sirius.MasterData.csproj `
+  -c Release `
+  -o .\artifacts\packages
 ```
 
 Package ID：
 
 ```text
 Sirius.Protocol
+Sirius.MasterData
 ```
+
+带有 `v1.2.3` 形式标签的 workflow 会将两个包发布到 GitHub Packages：
+`https://nuget.pkg.github.com/TeamOpenSirius/index.json`。消费项目添加该源后，
+即可使用 `PackageReference` 引用对应版本。
 
 消费项目可以使用条件 `ProjectReference` / `PackageReference`：
 

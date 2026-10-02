@@ -327,13 +327,21 @@ For environments where a sibling source checkout is not available, `Sirius.Proto
 dotnet pack .\src\Sirius.Protocol\Sirius.Protocol.csproj `
   -c Release `
   -o .\artifacts\packages
+dotnet pack .\src\Sirius.MasterData\Sirius.MasterData.csproj `
+  -c Release `
+  -o .\artifacts\packages
 ```
 
-The package ID is:
+The package IDs are:
 
 ```text
 Sirius.Protocol
+Sirius.MasterData
 ```
+
+Tagged workflow runs (`v1.2.3`) publish both packages to GitHub Packages at
+`https://nuget.pkg.github.com/TeamOpenSirius/index.json`. Consumers should add
+that source and reference the matching version with `PackageReference`.
 
 Consumer repositories may use a conditional `ProjectReference` / `PackageReference` strategy so developer environments use live source while isolated build environments use the packed artifact.
 
