@@ -1,4 +1,4 @@
-name: .NET build and package
+name: .NET build and rolling release
 
 on:
   push:
@@ -14,13 +14,16 @@ on:
         required: false
         type: string
 
-permissions:
-  contents: read
-  packages: write
+concurrency:
+  group: siriusdata-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     outputs:
       package-version: ${{ steps.version.outputs.value }}
 
@@ -28,14 +31,14 @@ jobs:
     - name: Check out source
       uses: actions/checkout@v4
       with:
-        # A workflow_call originates in the consuming repository. Build the
-        # SiriusData checkout in that case; normal events use their own ref.
         repository: ${{ github.event_name == 'workflow_call' && 'TeamOpenSirius/SiriusData' || github.repository }}
         ref: ${{ github.event_name == 'workflow_call' && 'main' || github.ref }}
+
     - name: Set up .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 10.x
+
     - name: Resolve package version
       id: version
       shell: bash
@@ -49,16 +52,26 @@ jobs:
         elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
           version="${TAG_NAME#v}"
         else
-          version="1.0.0-ci.${RUN_NUMBER}"
+          base_version="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' src/Sirius.Protocol/Sirius.Protocol.csproj | head -n 1)"
+          if [[ -z "$base_version" ]]; then
+            echo "Unable to resolve Sirius.Protocol <Version>." >&2
+            exit 1
+          fi
+          version="${base_version}-ci.${RUN_NUMBER}"
         fi
+
         echo "value=$version" >> "$GITHUB_OUTPUT"
-        echo "Building Sirius.Protocol $version"
+        echo "Building SiriusData $version"
+
     - name: Restore dependencies
       run: dotnet restore SiriusData.sln
+
     - name: Build
       run: dotnet build SiriusData.sln --configuration Release --no-restore
+
     - name: Test
       run: dotnet test SiriusData.sln --configuration Release --no-build --verbosity normal
+
     - name: Pack Sirius.Protocol
       run: >-
         dotnet pack src/Sirius.Protocol/Sirius.Protocol.csproj
@@ -68,6 +81,7 @@ jobs:
         -p:PackageVersion=${{ steps.version.outputs.value }}
         -p:IncludeSymbols=true
         -p:SymbolPackageFormat=snupkg
+
     - name: Pack Sirius.MasterData
       run: >-
         dotnet pack src/Sirius.MasterData/Sirius.MasterData.csproj
@@ -77,23 +91,52 @@ jobs:
         -p:PackageVersion=${{ steps.version.outputs.value }}
         -p:IncludeSymbols=true
         -p:SymbolPackageFormat=snupkg
-    - name: Collect build outputs
+
+    - name: Prepare stable release assets
       shell: bash
       run: |
-        mkdir -p artifacts/binaries
-        cp -R src/Sirius.Protocol/bin/Release/net10.0 artifacts/binaries/net10.0
-        cp -R src/Sirius.MasterData/bin/Release/net10.0 artifacts/binaries/masterdata-net10.0
-    - name: Upload packages and binaries
+        set -euo pipefail
+        mkdir -p artifacts/release
+
+        (
+          cd src/Sirius.Protocol/bin/Release/net10.0
+          zip -qr "$GITHUB_WORKSPACE/artifacts/release/Sirius.Protocol.zip" .
+        )
+        (
+          cd src/Sirius.MasterData/bin/Release/net10.0
+          zip -qr "$GITHUB_WORKSPACE/artifacts/release/Sirius.MasterData.zip" .
+        )
+
+        protocol_nupkg="$(find artifacts/packages -maxdepth 1 -type f -name 'Sirius.Protocol.*.nupkg' | head -n 1)"
+        masterdata_nupkg="$(find artifacts/packages -maxdepth 1 -type f -name 'Sirius.MasterData.*.nupkg' | head -n 1)"
+        protocol_snupkg="$(find artifacts/packages -maxdepth 1 -type f -name 'Sirius.Protocol.*.snupkg' | head -n 1)"
+        masterdata_snupkg="$(find artifacts/packages -maxdepth 1 -type f -name 'Sirius.MasterData.*.snupkg' | head -n 1)"
+
+        test -n "$protocol_nupkg"
+        test -n "$masterdata_nupkg"
+        test -n "$protocol_snupkg"
+        test -n "$masterdata_snupkg"
+
+        cp "$protocol_nupkg" artifacts/release/Sirius.Protocol.nupkg
+        cp "$masterdata_nupkg" artifacts/release/Sirius.MasterData.nupkg
+        cp "$protocol_snupkg" artifacts/release/Sirius.Protocol.snupkg
+        cp "$masterdata_snupkg" artifacts/release/Sirius.MasterData.snupkg
+
+        (
+          cd artifacts/release
+          sha256sum Sirius.Protocol.zip Sirius.MasterData.zip Sirius.Protocol.nupkg Sirius.MasterData.nupkg \
+            > SHA256SUMS.txt
+        )
+
+    - name: Upload build artifact
       uses: actions/upload-artifact@v4
       with:
         name: siriusdata-${{ steps.version.outputs.value }}
-        path: |
-          artifacts/packages/*.nupkg
-          artifacts/packages/*.snupkg
-          artifacts/binaries
+        path: artifacts/release
         if-no-files-found: error
         retention-days: 30
-    - name: Publish packages to GitHub Packages
+
+    - name: Publish tagged packages to GitHub Packages
       if: startsWith(github.ref, 'refs/tags/v')
       shell: bash
       env:
@@ -105,3 +148,63 @@ jobs:
             --api-key "$GITHUB_TOKEN" \
             --skip-duplicate
         done
+
+  rolling-release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Download release assets
+      uses: actions/download-artifact@v4
+      with:
+        name: siriusdata-${{ needs.build.outputs.package-version }}
+        path: artifacts/release
+
+    - name: Publish rolling latest release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        RELEASE_TAG: latest
+        PACKAGE_VERSION: ${{ needs.build.outputs.package-version }}
+      run: |
+        set -euo pipefail
+
+        if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+          gh api \
+            --method PATCH \
+            "repos/$GITHUB_REPOSITORY/git/refs/tags/$RELEASE_TAG" \
+            -f sha="$GITHUB_SHA" \
+            -F force=true \
+            >/dev/null
+        else
+          gh api \
+            --method POST \
+            "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f ref="refs/tags/$RELEASE_TAG" \
+            -f sha="$GITHUB_SHA" \
+            >/dev/null
+        fi
+
+        notes="Automated rolling build from \`main\`.
+
+        Package version: \`$PACKAGE_VERSION\`
+        Commit: \`$GITHUB_SHA\`
+
+        These assets are replaced on every successful push to \`main\`."
+
+        if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+          gh release upload "$RELEASE_TAG" artifacts/release/* --clobber
+          gh release edit "$RELEASE_TAG" \
+            --title "Latest SiriusData Build" \
+            --notes "$notes" \
+            --latest
+        else
+          gh release create "$RELEASE_TAG" artifacts/release/* \
+            --title "Latest SiriusData Build" \
+            --notes "$notes" \
+            --latest \
+            --verify-tag
+        fi
