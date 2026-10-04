@@ -27,7 +27,11 @@ public sealed record PlatformSongNoteStatistics(long ComboCount, PlatformSongNot
 public sealed record PlatformSongChartSummary(
     string Key, string Kind, string Id, string MusicId, int Difficulty, string Label,
     string Level, string? SpecialType, string MetricKind,
-    PlatformSongNoteStatistics? NoteStatistics, PlatformSongChartPersonal Personal);
+    PlatformSongNoteStatistics? NoteStatistics, PlatformSongChartPersonal Personal)
+{
+    // Additive public-artifact identity. Older API responses may omit it.
+    public string? ResourceKey { get; init; }
+}
 public sealed record PlatformSongSummary(
     string Id, string Title, string Pronunciation, string Composer, string Lyricist,
     string Arranger, string Singer, string? CoverUrl, string CoverType, bool IsLongVersion,
@@ -55,6 +59,30 @@ public sealed record PlatformSongChartDetail(
     public string ResourceVersion { get; init; } = "";
     public string CounterRulesVersion { get; init; } = "";
 }
+
+public sealed record PlatformSongExplorerPublicSong(
+    string Id, string Title, PlatformSongChartSummary[] Charts);
+public sealed record PlatformSongExplorerPublicCatalog(
+    string CatalogVersion, string ResourceVersion, string CounterRulesVersion,
+    string SchemaVersion, PlatformSongExplorerPublicSong[] Songs, string ChartBaseUrl);
+public sealed record PlatformSongPopulationValue(double Value, long Count);
+public sealed record PlatformSongPopulationMetric(
+    string Metric, bool Applicable, long SampleCount, long VisibleSampleCount,
+    double? Mean, PlatformSongPopulationValue[] Values)
+{
+    public long NoRecordCount { get; init; }
+    public long NoEligibleRecordCount { get; init; }
+    public long UnavailableCount { get; init; }
+}
+public sealed record PlatformSongExplorerPopulationArtifact(
+    string ChartKey, string SnapshotId, string CatalogVersion, string ScoreVersion,
+    string SchemaVersion, string AsOf, string ExpiresAt,
+    PlatformSongSourceCoverage SourceCoverage, PlatformSongPopulationMetric[] Metrics);
+public sealed record PlatformSongExplorerPersonalChart(
+    string ChartKey, PlatformSongChartPersonal Personal);
+public sealed record PlatformSongExplorerPersonalProjection(
+    string CatalogVersion, string ScoreVersion, string SchemaVersion,
+    PlatformSongSourceCoverage SourceCoverage, PlatformSongExplorerPersonalChart[] Charts);
 public sealed record PlatformSongDistributionRange(double Min, double Max);
 public sealed record PlatformSongDistributionBin(double Lower, double Upper, long Count);
 public sealed record PlatformSongDistributionQuery

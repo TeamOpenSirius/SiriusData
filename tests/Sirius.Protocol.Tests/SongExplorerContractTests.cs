@@ -54,4 +54,31 @@ public sealed class SongExplorerContractTests
         Assert.Equal(fallback, JsonSerializer.Deserialize<PlatformSongExplorerPage>(pageJson, Json)!.Items[0].CoverFallbackUrl);
         Assert.Equal(fallback, JsonSerializer.Deserialize<PlatformSongChartDetail>(detailJson, Json)!.Song.CoverFallbackUrl);
     }
+
+    [Fact]
+    public void Chart_resource_key_and_public_population_contracts_round_trip()
+    {
+        var coverage = new PlatformSongSourceCoverage("complete", "trusted", "aggregate", []);
+        var chart = new PlatformSongChartSummary("another:9", "another", "9", "1", 5, "Another",
+            "X", "append", "none", null, new("unavailable", null, null, null, null, coverage))
+        {
+            ResourceKey = "notation_9001"
+        };
+        var catalog = new PlatformSongExplorerPublicCatalog(
+            "catalog-1", "resource-1", "sirius-chart-notes-v3", "schema-1",
+            [new("1", "Song", [chart])], "https://cdn.example/song-explorer/catalog-1/");
+        var population = new PlatformSongExplorerPopulationArtifact(
+            "another:9", "snapshot-1", "catalog-1", "score-1", "schema-1",
+            "2026-10-05T00:00:00Z", "2026-10-05T01:00:00Z", coverage,
+            [new("achievement", true, 1, 1, null, [new(99.5, 4)])]);
+
+        var catalogJson = JsonSerializer.Serialize(catalog, Json);
+        var populationJson = JsonSerializer.Serialize(population, Json);
+        Assert.Equal("notation_9001", JsonDocument.Parse(catalogJson).RootElement
+            .GetProperty("songs")[0].GetProperty("charts")[0].GetProperty("resourceKey").GetString());
+        Assert.Equal("notation_9001", JsonSerializer.Deserialize<PlatformSongExplorerPublicCatalog>(catalogJson, Json)!
+            .Songs[0].Charts[0].ResourceKey);
+        Assert.Equal(4, JsonSerializer.Deserialize<PlatformSongExplorerPopulationArtifact>(populationJson, Json)!
+            .Metrics[0].Values[0].Count);
+    }
 }
