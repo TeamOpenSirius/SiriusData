@@ -281,6 +281,44 @@ SiriusData/
         └── MasterMemory/
 ```
 
+## Song Explorer JSON contracts
+
+`src/Sirius.Protocol/Models/InternalApi/PlatformSongExplorerApiContracts.cs` contains
+the platform Song Explorer query, page, chart detail, distribution, error, and local
+history rebuild result DTOs. These use the web JSON camelCase naming policy and do
+not implement `IDataObject` or change MessagePack union IDs or MasterMemory layouts.
+
+`PlatformSongExplorerRebuildResult` matches the existing controlled `rebuild-local`
+response: `dryRun`, `scanned`, `eligible`, `ineligible`, `skipped`,
+`nextAfterResultId`, `hasMore`, and `warnings`. `skipped` is an object mapping reason
+keys to integer counts, not a total count or a source enum. `nextAfterResultId` is a
+decimal string (including `"0"` before any result), preserving 64-bit cursor IDs.
+Consumers should use stable keys, preserve nullable values and genuine zeroes, and
+retain page/detail `statisticsVersion`, `resourceVersion`, and `counterRulesVersion`
+alongside the catalog, schema, and score versions.
+
+`PlatformSongSummary.CoverUrl` is the primary CDN image URL. The optional
+`CoverFallbackUrl` (`coverFallbackUrl` in web JSON) supplies a GitHub URL pinned to
+the same resource revision for use if the primary image fails. An omitted or null
+fallback remains valid; older payloads deserialize with a null fallback, and the
+existing positional constructor is unchanged.
+
+Run `dotnet test tests/Sirius.Protocol.Tests -c Release` to verify the JSON boundary,
+including responses from before the fallback field was added.
+
+The 2026-10-04 Song Explorer validation passed all 11 contract tests, both against
+the source project and against the local NuGet packages. The Release MasterMemory
+tool also returned `BYTE-EXACT ROUNDTRIP: PASS` for two real publications: 229
+tables with 84,822 and 84,877 rows respectively. Input/output hashes and lengths
+matched, and both inputs remained unchanged. This verifies decoding and no-edit
+repacking; it does not test edited-table rebuilds. To repeat with an authorized
+sample, set `SIRIUS_TEST_MASTER_DB` to its path and run from the repository root:
+
+```powershell
+dotnet run --project ./src/Sirius.Protocol/tools/Wds.MasterMemory.Tool -c Release -- `
+  roundtrip "$env:SIRIUS_TEST_MASTER_DB" ./artifacts/mastermemory-roundtrip
+```
+
 ## Build
 
 ### Requirements
@@ -344,6 +382,31 @@ Tagged workflow runs (`v1.2.3`) publish both packages to GitHub Packages at
 that source and reference the matching version with `PackageReference`.
 
 Consumer repositories may use a conditional `ProjectReference` / `PackageReference` strategy so developer environments use live source while isolated build environments use the packed artifact.
+
+### Local Song Explorer integration package
+
+Dashboard and Server's current rolling-package integration uses NuGet. Keep that
+boundary when testing unreleased Song Explorer contracts locally. From this
+repository, pack both libraries with the same unique prerelease version:
+
+```powershell
+$packageVersion = '1.0.3-song-explorer.local.1' # Example; change for new contents.
+$packageDirectory = Join-Path (Get-Location).Path 'artifacts/packages'
+dotnet pack ./src/Sirius.Protocol/Sirius.Protocol.csproj -c Release `
+  "-p:PackageVersion=$packageVersion" -o $packageDirectory
+dotnet pack ./src/Sirius.MasterData/Sirius.MasterData.csproj -c Release `
+  "-p:PackageVersion=$packageVersion" -o $packageDirectory
+```
+
+For consumer restores, set `UseSiriusDataRollingPackages=false`, add the computed
+`$packageDirectory` to `RestoreAdditionalProjectSources`, and pin the existing
+`PackageReference` to `$packageVersion`. Dashboard supports the
+`SiriusProtocolPackageVersion` MSBuild property; a consumer with a literal `*-*`
+reference needs an explicit version override for that item as well. Use an isolated
+`RestorePackagesPath` for these test packages. Do not replace consumer references
+with sibling source `ProjectReference`s. These commands create local artifacts;
+they do not publish a package or release. Use a new prerelease version after any
+further contract changes to avoid stale NuGet caches.
 
 ## MasterMemory Usage
 
@@ -473,13 +536,38 @@ A successful byte-exact no-op round trip is a strong signal that the model still
 ## CI
 
 GitHub Actions runs on pushes and pull requests targeting `main`, and on `v*`
-tags. It restores dependencies, builds and tests the solution with the .NET 10
-SDK, then packs `Sirius.Protocol` for `net10.0`.
+tags. It restores dependencies, builds the solution and invokes solution-level
+tests with the .NET 10 SDK, then packs `Sirius.Protocol` and `Sirius.MasterData`
+for `net10.0`.
 
-Each run publishes a downloadable artifact containing the versioned NuGet
-package (`.nupkg` and `.snupkg`) and the Release binaries. CI builds use a
-`1.0.0-ci.<run number>` version; a tag such as `v1.2.3` produces version
-`1.2.3`. Artifacts are retained by GitHub Actions for 30 days.
+`tests/Sirius.Protocol.Tests` is not included in `SiriusData.sln`, so the current
+solution-level CI test step does not run these contract tests. Run the explicit
+`dotnet test tests/Sirius.Protocol.Tests -c Release` command before merging
+contract changes.
+
+Each run uploads a downloadable artifact containing both NuGet packages (`.nupkg`
+and `.snupkg`), Release binary ZIPs, and `SHA256SUMS.txt`. CI package versions use
+`<Version>-ci.<run number>`, with `<Version>` read from `Sirius.Protocol.csproj`;
+a tag such as `v1.2.3` produces version `1.2.3`. Artifact files have stable package
+names and are retained by GitHub Actions for 30 days.
+
+### Song Explorer rollout order
+
+1. Review and merge the Data contract PR into `main`. PR builds provide validation
+   artifacts but do not update the rolling release.
+2. Wait for that `main` push's `build` and `rolling-release` jobs to succeed. The
+   workflow updates the `latest` release with `Sirius.Protocol.nupkg` and
+   `Sirius.MasterData.nupkg`. Check that its recorded commit is the reviewed merge
+   and that both packages have the same generated version.
+3. Rerun Dashboard and Server restore/build checks using their existing rolling
+   NuGet integration, then complete their PRs. Their `Directory.Build.targets`
+   downloads both packages from `releases/download/latest/` and checks matching
+   versions. No sibling source reference or consumer package-source change is
+   required. The local prerelease package is for validation only and is not
+   published ahead of review.
+
+Only `v*` tag builds push packages to GitHub Packages; the rolling consumer flow
+uses the GitHub Release assets instead.
 
 The workflow is also reusable from another repository:
 
