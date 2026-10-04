@@ -295,6 +295,38 @@ SiriusData/
         └── MasterMemory/
 ```
 
+## 歌曲浏览器 JSON 契约
+
+`src/Sirius.Protocol/Models/InternalApi/PlatformSongExplorerApiContracts.cs` 定义平台
+歌曲浏览器的查询、列表、谱面详情、分布、错误和本地历史恢复结果 DTO。它们使用 Web JSON
+的 camelCase 命名策略，不实现 `IDataObject`，不改变 MessagePack Union 编号或 MasterMemory 布局。
+
+`PlatformSongExplorerRebuildResult` 与现有受控 `rebuild-local` 返回一致，字段为
+`dryRun`、`scanned`、`eligible`、`ineligible`、`skipped`、`nextAfterResultId`、`hasMore`
+和 `warnings`。`skipped` 是原因 key 到整数计数的对象，不是总计数或来源枚举。
+`nextAfterResultId` 是十进制字符串（尚无结果时可以为 `"0"`），保留 64 位游标 ID 精度。
+消费方应使用稳定 key，保留 nullable 与真实零值，并在目录、schema 和成绩版本之外，
+保留列表／详情的 `statisticsVersion`、`resourceVersion`、`counterRulesVersion`。
+
+`PlatformSongSummary.CoverUrl` 是 CDN 主封面地址。可选的 `CoverFallbackUrl`
+（Web JSON 字段名 `coverFallbackUrl`）提供固定到同一资源版本的 GitHub 地址，供主封面
+加载失败时回退使用。省略或传入 null 均有效；旧响应反序列化后该字段为 null，原有位置
+构造函数签名保持不变。
+
+运行 `dotnet test tests/Sirius.Protocol.Tests -c Release` 验证 JSON 边界，包括新增回退字段
+之前的旧响应兼容性。
+
+2026-10-04 的歌曲浏览器验证中，源码项目与本地 NuGet 包的 11 项契约测试均已通过。
+Release MasterMemory 工具对两份真实发布数据均返回 `BYTE-EXACT ROUNDTRIP: PASS`：
+两份均为 229 表，分别含 84,822 与 84,877 行。输入／输出的哈希与长度一致，原始输入
+保持不变。这验证了解码与无编辑重打包，不代表已验证编辑表后的重建。复跑时将
+`SIRIUS_TEST_MASTER_DB` 设置为获准使用的样本路径，在仓库根目录执行：
+
+```powershell
+dotnet run --project ./src/Sirius.Protocol/tools/Wds.MasterMemory.Tool -c Release -- `
+  roundtrip "$env:SIRIUS_TEST_MASTER_DB" ./artifacts/mastermemory-roundtrip
+```
+
 ## 构建
 
 ### 环境要求
@@ -361,6 +393,28 @@ Sirius.MasterData
 
 - 开发机优先引用同级最新源码；
 - CI / 独立构建环境使用预编译 Package。
+
+### 歌曲浏览器本地联调包
+
+Dashboard 和 Server 当前通过 NuGet 使用滚动包。本地验证尚未发布的歌曲浏览器契约时，
+保持这一包引用边界，在本仓库为两个库指定相同且唯一的预发布版本：
+
+```powershell
+$packageVersion = '1.0.3-song-explorer.local.1' # 示例；内容变化时换用新版本。
+$packageDirectory = Join-Path (Get-Location).Path 'artifacts/packages'
+dotnet pack ./src/Sirius.Protocol/Sirius.Protocol.csproj -c Release `
+  "-p:PackageVersion=$packageVersion" -o $packageDirectory
+dotnet pack ./src/Sirius.MasterData/Sirius.MasterData.csproj -c Release `
+  "-p:PackageVersion=$packageVersion" -o $packageDirectory
+```
+
+消费方 restore 时设置 `UseSiriusDataRollingPackages=false`，将计算得到的
+`$packageDirectory` 加入 `RestoreAdditionalProjectSources`，并将现有
+`PackageReference` 固定到 `$packageVersion`。Dashboard 可使用 MSBuild 属性
+`SiriusProtocolPackageVersion`；如果消费项目直接写了 `*-*`，还需显式覆盖该引用项的版本。
+联调使用隔离的 `RestorePackagesPath`，不要改回兄弟源码 `ProjectReference`。
+以上命令只生成本地产物，不发布包或 release。契约再次变化时应换用新的预发布版本，
+避免 NuGet 缓存复用旧包。
 
 ## MasterMemory 使用
 
@@ -494,13 +548,30 @@ dotnet run --project .\src\Sirius.Protocol\tools\Wds.MasterMemory.Tool -- `
 ## CI
 
 GitHub Actions 会在 push 到 `main`、针对 `main` 的 Pull Request 以及 `v*`
-标签上运行。流程使用 .NET 10 SDK 完成 Restore、Release Build 和测试，然后
-为 `net10.0` 打包 `Sirius.Protocol`。
+标签上运行。流程使用 .NET 10 SDK 完成 Restore、Release Build 并调用 solution 级测试，
+然后为 `net10.0` 打包 `Sirius.Protocol` 与 `Sirius.MasterData`。
 
-每次运行都会发布可下载的 artifact，其中包含带版本号的 NuGet 包（`.nupkg`
-和 `.snupkg`）以及 Release 二进制文件。普通 CI 使用
-`1.0.0-ci.<运行编号>` 版本；例如 `v1.2.3` 标签会生成 `1.2.3`。artifact
-由 GitHub Actions 保留 30 天。
+`tests/Sirius.Protocol.Tests` 未加入 `SiriusData.sln`，因此当前 CI 的 solution 级测试
+步骤不会执行这些契约测试。合并契约变更前应显式运行
+`dotnet test tests/Sirius.Protocol.Tests -c Release`。
+
+每次运行都会上传可下载的 artifact，包含两个 NuGet 包（`.nupkg` 和 `.snupkg`）、
+Release 二进制 ZIP 和 `SHA256SUMS.txt`。普通 CI 包版本为 `<Version>-ci.<运行编号>`，
+其中 `<Version>` 读取自 `Sirius.Protocol.csproj`；例如 `v1.2.3` 标签会生成 `1.2.3`。
+artifact 中的包文件使用固定名称，由 GitHub Actions 保留 30 天。
+
+### 歌曲浏览器发布顺序
+
+1. 审核并将 Data 契约 PR 合并到 `main`。PR 构建会提供验证产物，但不会更新滚动发布。
+2. 等待该次 `main` push 的 `build` 与 `rolling-release` 任务成功。workflow 会更新
+   `latest` release 中的 `Sirius.Protocol.nupkg` 与 `Sirius.MasterData.nupkg`。
+   确认 release 记录的提交对应已审核合并，且两个包使用相同的生成版本。
+3. Dashboard 与 Server 保持现有滚动 NuGet 接入，重新执行 restore／build 检查后再
+   完成各自 PR。其 `Directory.Build.targets` 从 `releases/download/latest/` 下载两个包
+   并校验版本一致，无须添加兄弟源码引用或修改消费方包源。本地预发布包仅用于验证，
+   不在审核前发布。
+
+仅 `v*` 标签构建会推送到 GitHub Packages；滚动消费流程使用 GitHub Release 附件。
 
 其他仓库也可以直接复用这个 workflow：
 
