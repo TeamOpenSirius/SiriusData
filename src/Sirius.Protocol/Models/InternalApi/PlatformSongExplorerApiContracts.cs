@@ -12,6 +12,7 @@ public sealed record PlatformSongExplorerQuery
     public string ChartKind { get; init; } = "all";
     public string CoverType { get; init; } = "all";
     public string Length { get; init; } = "all";
+    public bool PlayedOnly { get; init; }
     public string Sort { get; init; } = "title-asc";
     public string? Cursor { get; init; }
     public int Limit { get; init; } = 18;
